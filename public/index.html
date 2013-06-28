@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ATLAS Groups by Member ID</title>
+    <script type="text/javascript" src="http://jqueryjs.googlecode.com/files/jquery-1.3.2.min.js"></script>
+    <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.5/leaflet.css" />
+    <script src="http://cdn.leafletjs.com/leaflet-0.5/leaflet.js"></script>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+    <!--  GEOCODER -->    
+    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false"></script>
+    
+    <style>
+    
+    #map { z-index: 10;
+        width: 100%; height: 600px; margin: 0 0 0 0px;
+    }
+    
+    #menu {
+background-color: white;
+top: 1px;
+z-index: 999;
+position: fixed;
+height: 610px;
+overflow: scroll;
+width: 400px;
+float: right;
+margin-left: 65%;
+    }
+    
+    
+    #info {
+        float: left;
+        width: 300px;
+    }
+    #searchaddressbox {
+        margin-top: 5px;
+        float: left;
+        position: absolute;
+        z-index: 1;
+        height: 30px !important;
+        width: 62%;
+        font-family: "HelveticaNeueW01-75Bold", "Helvetica", Arial, sans-serif;
+        border-radius: 4px;
+        outline: none;
+        font-size: 18px;
+        line-height: 18px;
+        
+    }
+    .title1 {
+        padding: 10px;
+        height: 50px;
+        position: relative;
+        line-height: 20px !important;
+        font: bold 4em/5em "Helvetica Neue", Arial, Helvetica, Geneva, sans-serif;
+    }
+    #photos {
+        margin: auto;
+    }
+    
+    #groups {
+        padding: 20px;
+        top: 120px;
+        position: fixed;
+        overflow-y: scroll;
+        height: 450px;
+    }
+    
+    .leaflet-popup-content-wrapper {
+        max-width: 250px;
+    }
+    
+    .display {
+        position: fixed;
+        margin-top: 2%;
+        margin-left: 59%;
+        z-index: 10;
+    }
+    
+    .leaflet-popup-close-button {
+        position: fixed;
+        margin-top: 20px;
+        margin-left: 180px;
+        z-index: 1500;
+    }
+    
+    
+    .input_text {
+    
+    padding:10px 10px;
+    
+    background:#fff;
+    
+    border-bottom: 2px double #171717;
+    
+    border-top: 2px double #171717;
+    
+    border-left: 2px double #333333;
+    
+    border-right: 2px double #333333;
+    
+    }
+    </style>
+ 
+    
+    </head>
+
+    <body>
+    <button id="submit">Submit</button>
+    
+    <button id="getres">get</button>
+    
+    <div id="example"></div>
+    
+    
+    <div id="map"></div>
+    <input id="searchaddressbox" class="input_text" type="text" placeholder="Search" value="Londres">
+    <div id="menu">
+        <h1 class="title1">ATLAS List</h1>
+        <div id="groups"></div>
+    </div>   
+    
+    <script type="text/javascript">
+    
+    $(function () {
+        $("#submit").click( function () {
+            //addresse de récupération
+            var str = $("#hello").val();
+            console.log(str);
+            // transformer la string en json
+            var json = JSON.parse(str);
+            //envoyer vers le server
+            $.post("/geoitems", json, function (c) {
+                alert("Toto" + JSON.stringify(c));
+                //savegarder
+            });
+            //serialiser en format lisible object pour l'alert
+            //alert(JSON.stringify(json));        
+        });
+        
+        
+        $("#getres").click( function () {
+            //c = resultats
+            $.get("/geoitems?dirty=true", function (c) {
+                //alert("Toto" + JSON.stringify(c));
+                //mettre
+                $("#example").html(JSON.stringify(c));
+            })
+        });
+        
+    });
+    
+    
+    </script>
+    
+   <script type="text/javascript">
+    
+     //MAP     
+        var coords = 0;
+                    
+                   // SET MASTER MAP
+                   var map = L.map('map').setView([48.85522811385678, 2.3531341552734375 ], 2);
+                   L.tileLayer('http://{s}.tile.cloudmade.com/ffdd86e27a8a46129afb5e678456afaf/997/256/{z}/{x}/{y}.png', {
+                       attribution: 'Hello Place4Home',
+                       maxZoom: 18
+                   }).addTo(map);
+        
+                    //EVENT CLICK COORDONNÉS  VAR LAT LNG
+                    var popup = L.popup();
+                    
+                    function onMapClick(e) {
+                    var coords = e.latlng;
+                        popup
+                            .setLatLng(e.latlng)
+                            .setContent("Cave !" + coords)
+                            .openOn(map);
+                    var lat = coords.lat;
+                    var lng = coords.lng;
+                    clear();
+                    //gofetch(lat,lng);   //meetup api
+                    console.log(lat);
+                    console.log(lng);
+                    }
+                    map.on('click', onMapClick);
+         
+        
+        function gofetch(lat,lng){
+            
+            //https://api.meetup.com/2/groups?callback=?&sign=true&member_id=8377069&page=20&api&key=4a3d4e742c154d2f5c91943677f5e29&only=name,link
+            
+            $.getJSON("https://api.meetup.com/find/groups?callback=?&lon="+ lng + "&lat="+ lat+"&page=10&api&key=4a3d4e742c154d2f5c91943677f5e29", 
+        function (data) {
+            console.log(data);
+            var meetuprecu = data['data'].length;
+            var links = [0] 
+            var names = [0]
+            var texts = [0]
+            var lat = [0]
+            var lng = [0]
+            var members = [0]
+            //remplir les array avec les données de l'objet recu
+            for (i = 0; i < meetuprecu; i++) {
+                links[i] = data['data'][i].link;
+                names[i] = data['data'][i].name;
+                lat[i] = data['data'][i].lat;
+                lng[i] = data['data'][i].lon;
+                members[i] = data['data'][i].members;
+               // texts[i] = data['data'][i].caption.text;
+            
+            }
+            //save auto first lat lng clicked
+            var name1 = names[1]
+            var lat1 = lat[1]
+            var lng1 = lng[1]
+            
+            var json = { name : name1, latitude : lat1, longitude : lng1 };
+            //envoyer vers le server
+            $.post("/geoitems", json, function (c) {
+                alert("Toto" + JSON.stringify(c));
+                //savegarder
+            });
+            //PRINT HTML METTUP FINDED
+            for (var y = 0; y < lat.length; y++) {
+            
+                var unephoto = "<div id=\"info\" data-lat=\"" + lat[y] + "\" data-lng=\"" + lng[y] + "\"><div id='boxcontent' style='font-family:Calibri'><a href=\"" + links[y] +"\" target='_blank'><p class=\"legende\">" + names[y] +
+                    "</p></a>Membres : " + members[y] +
+                        "</div></div>"
+            
+                $('#groups').append(unephoto);
+            };
+            
+            // if there is meetup finded , bind popup dont working
+            $("#info").each( function () {
+                    //$(this).children().addClass("hello")
+                    var e = $(this);
+                    var lat = e.attr("data-lat");
+                    var lng = e.attr("data-lng");
+                    if (lat && lng) {
+                        var marker = L.marker([lat, lng]).bindPopup(e.html()).addTo(map);
+                        marker.on("click", function () { marker.openPopup()})
+                    }
+            });
+            
+                });
+            }
+        
+        //geocoder
+        function initialize() {
+          geocoder = new google.maps.Geocoder();
+        }  
+        
+        google.maps.event.addDomListener(window, 'load', initialize);
+         
+        // Clear when new input    
+        function clear() {
+            $('#groups').children().remove();
+        }
+    
+        
+        //Keypress Input SEARCH PLACE
+        $("input#searchaddressbox").keydown(function(e){
+            if (e.keyCode == 13 && !e.shiftKey)
+            {    
+                var zipcode = $("input#searchaddressbox").val();
+                clear();
+                console.log("keypress" + zipcode);
+                codeAddress();
+                
+                function codeAddress() {
+                  var address = document.getElementById('searchaddressbox').value;
+                  console.log("yesss");
+                  geocoder.geocode( { 'address': address}, function(results, status) {
+                    if (status == google.maps.GeocoderStatus.OK) {
+                    
+                      console.log(results[0].geometry.location.jb);
+                      console.log(results[0].geometry.location.kb);
+                      // end interesting function
+                      var lat = results[0].geometry.location.jb;
+                      var lng = results[0].geometry.location.kb;
+                      map.setView([lat ,  lng], 14);
+                      
+                
+                    } else {
+                      alert('Geocode was not successful for the following reason: ' + status);
+                    }
+                  });
+                }
+                
+            } else {
+            console.log("pas trouvé de place avec addresse donnée");
+        }
+        }); 
+    
+    </script>
+    </body>
+
+    </html>
